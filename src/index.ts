@@ -24,19 +24,32 @@ io.on(SERVER_EVENTS.CONNECTION, (socket) => {
   const token = socket.handshake.auth as { token: string };
 
   try {
-    const tokenVerification = verify(token.token, process.env.JWT_SECRET!) as { id: string };
+    const tokenVerification = verify(token.token, process.env.JWT_SECRET!) as {
+      id: string;
+    };
     users.set(tokenVerification.id, socket.id);
-    socket.emit(CLIENT_EVENTS.AUTHORIZED, {[EVENT_NAME]: SERVER_EVENTS.CONNECTION, data: tokenVerification.id });
+    socket.emit(CLIENT_EVENTS.AUTHORIZED, {
+      [EVENT_NAME]: SERVER_EVENTS.CONNECTION,
+      data: tokenVerification.id,
+    });
   } catch (err) {
-    socket.emit(CLIENT_EVENTS.UNAUTHORIZED, { [EVENT_NAME]: UNAUTHORIZED_ERROR });
+    socket.emit(CLIENT_EVENTS.UNAUTHORIZED, {
+      [EVENT_NAME]: SERVER_EVENTS.CONNECTION,
+      error: (err as Error).message,
+    });
   }
 
   socket.on(SERVER_EVENTS.CONNECT_FRIEND, (friendId: string, data: unknown) => {
     const friendSocketId = users.get(friendId);
     if (friendSocketId) {
-      socket.to(friendSocketId).emit(CLIENT_EVENTS.ERRORS, { [EVENT_NAME]: SERVER_EVENTS.CONNECT_FRIEND });
+      socket.to(friendSocketId).emit(CLIENT_EVENTS.ERRORS, {
+        [EVENT_NAME]: SERVER_EVENTS.CONNECT_FRIEND,
+      });
     } else {
-      socket.emit(CLIENT_EVENTS.ERRORS, { [EVENT_NAME]: SERVER_EVENTS.CONNECT_FRIEND, data: {isOnline: false} });
+      socket.emit(CLIENT_EVENTS.NOTIFICATION, {
+        [EVENT_NAME]: SERVER_EVENTS.CONNECT_FRIEND,
+        data: { isOnline: false },
+      });
     }
   });
 });

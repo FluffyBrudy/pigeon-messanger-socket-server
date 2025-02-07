@@ -7,4 +7,5 @@ export const CLIENT_EVENTS = {
   ERRORS: "errors",
   UNAUTHORIZED: "unauthorized",
   AUTHORIZED: "authorize",
+  NOTIFICATION: "notification",
 };
