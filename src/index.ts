@@ -1,11 +1,13 @@
 import express from "express";
 import { Server } from "socket.io";
 import { createServer } from "node:http";
-import { verify } from "jsonwebtoken";
 import { config } from "dotenv";
 import { CLIENT_EVENTS, SERVER_EVENTS } from "./constants/events";
-import { UNAUTHORIZED_ERROR } from "./constants/errors";
 import { EVENT_NAME } from "./constants/constants";
+import { ChatMessageData, SocketInstance } from "./types";
+import { verifyAuth } from "./middleware/authVerification";
+import { idValidation, messageValidation } from "./validation";
+import { concatProps } from "./utils/concatProp";
 
 config();
 
@@ -17,40 +19,61 @@ const io = new Server(httpServer, {
   },
 });
 
+io.use(verifyAuth());
+
 const users = new Map();
-console.clear();
 
-io.on(SERVER_EVENTS.CONNECTION, (socket) => {
-  const token = socket.handshake.auth as { token: string };
+io.on(SERVER_EVENTS.CONNECTION, (socket: SocketInstance) => {
+  users.set(socket.userId, socket.id);
 
-  try {
-    const tokenVerification = verify(token.token, process.env.JWT_SECRET!) as {
-      id: string;
-    };
-    users.set(tokenVerification.id, socket.id);
-    socket.emit(CLIENT_EVENTS.AUTHORIZED, {
-      [EVENT_NAME]: SERVER_EVENTS.CONNECTION,
-      data: tokenVerification.id,
-    });
-  } catch (err) {
-    socket.emit(CLIENT_EVENTS.UNAUTHORIZED, {
-      [EVENT_NAME]: SERVER_EVENTS.CONNECTION,
-      error: (err as Error).message,
-    });
-  }
+  socket.on(
+    SERVER_EVENTS.CONNECT_FRIEND,
+    (data: Record<"friendId", string>, callback: CallableFunction) => {
+      const validation = idValidation("friendId").validate(data);
+      if (validation.error) {
+        const errors = concatProps(validation.error.details, "message");
+        callback({ status: "failed", error: errors });
+        return;
+      }
+      const { friendId } = data;
+      const friendSocketId = users.get(friendId);
+      callback({ status: "ok" });
 
-  socket.on(SERVER_EVENTS.CONNECT_FRIEND, (friendId: string, data: unknown) => {
-    const friendSocketId = users.get(friendId);
-    if (friendSocketId) {
-      socket.to(friendSocketId).emit(CLIENT_EVENTS.ERRORS, {
-        [EVENT_NAME]: SERVER_EVENTS.CONNECT_FRIEND,
-      });
-    } else {
-      socket.emit(CLIENT_EVENTS.NOTIFICATION, {
-        [EVENT_NAME]: SERVER_EVENTS.CONNECT_FRIEND,
-        data: { isOnline: false },
-      });
+      if (friendSocketId) {
+        socket.to(friendSocketId).emit(CLIENT_EVENTS.NOTIFICATION, {
+          [EVENT_NAME]: SERVER_EVENTS.CONNECT_FRIEND,
+        });
+      }
     }
+  );
+
+  socket.on(
+    SERVER_EVENTS.CHAT_MESSAGE,
+    (data: ChatMessageData, callback: CallableFunction) => {
+      console.log(data);
+      const validation = messageValidation.validate(data);
+      if (validation.error) {
+        const errors = concatProps(validation.error.details, "message");
+        callback({ status: "failed", error: errors });
+        return;
+      }
+      const correspondingUsers = data.recipientId
+        .map((userId) => users.get(userId))
+        .filter(Boolean);
+      console.log(correspondingUsers);
+      if (correspondingUsers.length === 0) return;
+      socket.to(correspondingUsers).emit(CLIENT_EVENTS.CHAT_MESSAGE_RECEIVER, {
+        [EVENT_NAME]: SERVER_EVENTS.CHAT_MESSAGE,
+        message: data.message,
+        creatorId: data.creatorId,
+      });
+      callback({ status: "ok" });
+    }
+  );
+
+  socket.on("disconnect", () => {
+    console.log(socket.userId);
+    users.delete(socket.userId);
   });
 });
 
