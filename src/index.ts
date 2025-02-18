@@ -79,5 +79,5 @@ io.on(SERVER_EVENTS.CONNECTION, (socket: SocketInstance) => {
 
 const PORT = 4000;
 httpServer.listen(PORT, () => {
-  `Listening at: ${process.env.LOCAL_SERVER}:${PORT}`;
+  console.log(`Listening at: ${process.env.LOCAL_SERVER}:${PORT}`);
 });
