@@ -41,7 +41,7 @@ io.on(events_1.SERVER_EVENTS.CONNECTION, (socket) => {
         }
     });
     socket.on(events_1.SERVER_EVENTS.CHAT_MESSAGE, (data, callback) => {
-        console.log(data);
+        data;
         const validation = validation_1.messageValidation.validate(data);
         if (validation.error) {
             const errors = (0, concatProp_1.concatProps)(validation.error.details, "message");
@@ -51,7 +51,7 @@ io.on(events_1.SERVER_EVENTS.CONNECTION, (socket) => {
         const correspondingUsers = data.recipientId
             .map((userId) => users.get(userId))
             .filter(Boolean);
-        console.log(correspondingUsers);
+        correspondingUsers;
         if (correspondingUsers.length === 0)
             return;
         socket.to(correspondingUsers).emit(events_1.CLIENT_EVENTS.CHAT_MESSAGE_RECEIVER, {
@@ -62,11 +62,11 @@ io.on(events_1.SERVER_EVENTS.CONNECTION, (socket) => {
         callback({ status: "ok" });
     });
     socket.on("disconnect", () => {
-        console.log(socket.userId);
+        socket.userId;
         users.delete(socket.userId);
     });
 });
 const PORT = 4000;
 httpServer.listen(PORT, () => {
-    console.log(`Listening at: ${process.env.LOCAL_SERVER}:${PORT}`);
+    `Listening at: ${process.env.LOCAL_SERVER}:${PORT}`;
 });
