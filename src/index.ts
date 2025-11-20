@@ -44,7 +44,7 @@ io.on(SERVER_EVENTS.CONNECTION, (socket: SocketInstance) => {
           [EVENT_NAME]: SERVER_EVENTS.CONNECT_FRIEND,
         });
       }
-    }
+    },
   );
 
   socket.on(
@@ -68,7 +68,7 @@ io.on(SERVER_EVENTS.CONNECTION, (socket: SocketInstance) => {
         creatorId: data.creatorId,
       });
       callback({ status: "ok" });
-    }
+    },
   );
 
   socket.on("disconnect", () => {
@@ -77,7 +77,4 @@ io.on(SERVER_EVENTS.CONNECTION, (socket: SocketInstance) => {
   });
 });
 
-const PORT = 4000;
-httpServer.listen(PORT, () => {
-  console.log(`Listening at: ${process.env.LOCAL_SERVER}:${PORT}`);
-});
+export default app;
